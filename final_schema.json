@@ -1,0 +1,496 @@
+{
+    "_id": {
+      "bsonType": "objectId",
+      "description": "unique id for each document"
+    },
+    "state": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "raw": {
+          "bsonType": "string",
+          "description": "raw state name"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transformed state name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "district": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "code": {
+          "bsonType": "string",
+          "description": "district code"
+        },
+        "raw": {
+          "bsonType": "string",
+          "description": "raw district name"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transformed district name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tehsil": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "code": {
+          "bsonType": "string",
+          "description": "tehsil/taluk code"
+        },
+        "raw": {
+          "bsonType": "string",
+          "description": "raw tehsil/taluk name"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transformed tehsil/taluk name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "village": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "code": {
+          "bsonType": "string",
+          "description": "village code"
+        },
+        "raw": {
+          "bsonType": "string",
+          "description": "raw village name"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transformed village name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sro": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "code": {
+          "bsonType": "string",
+          "description": "sro coder"
+        },
+        "raw": {
+          "bsonType": "string",
+          "description": "raw sro name"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transformed sro name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "year": {
+      "bsonType": "int",
+      "description": "year of document registration"
+    },
+    "document_no": {
+      "bsonType": "string",
+      "description": "document number"
+    },
+    "dates": {
+      "bsonType": "object",
+      "required": [
+        "registration"
+      ],
+      "properties": {
+        "registration": {
+          "bsonType": "date",
+          "description": "registration date"
+        },
+        "execution": {
+          "bsonType": "date",
+          "description": "execution date"
+        },
+        "filing": {
+          "bsonType": "date",
+          "description": "filing date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "transaction_type": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform",
+        "teal"
+      ],
+      "properties": {
+        "raw": {
+          "bsonType": "string",
+          "description": "raw deed type"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transform deed type"
+        },
+        "teal": {
+          "bsonType": "string",
+          "description": "teal deed type"
+        }
+      },
+      "additionalProperties": false
+    },
+    "property_description": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "raw": {
+          "bsonType": "string",
+          "description": "raw address"
+        },
+        "transform": {
+          "bsonType": "string",
+          "description": "transform address"
+        }
+      },
+      "additionalProperties": false
+    },
+    "first_party": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "raw": {
+          "bsonType": "string",
+          "description": "raw first party names"
+        },
+        "transform": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "string"
+          },
+          "description": "transform first party names"
+        },
+        "pan": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "string"
+          },
+          "description": "transform first party names"
+        },
+        "type": {
+          "bsonType": "string",
+          "description": "type of first party"
+        },
+        "tag": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "bsonType": "string",
+                "description": "entity id"
+              },
+              "name": {
+                "bsonType": "string",
+                "description": "tagged entitiy name"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "second_party": {
+      "bsonType": "object",
+      "required": [
+        "raw",
+        "transform"
+      ],
+      "properties": {
+        "raw": {
+          "bsonType": "string",
+          "description": "raw second party name"
+        },
+        "transform": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "string"
+          },
+          "description": "transform first party names"
+        },
+        "pan": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "string"
+          },
+          "description": "transform first party names"
+        },
+        "type": {
+          "bsonType": "string",
+          "description": "type of party names"
+        },
+        "tag": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "bsonType": "string",
+                "description": "entity id"
+              },
+              "name": {
+                "bsonType": "string",
+                "description": "tagged entitiy name"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "fee": {
+      "bsonType": "object",
+      "properties": {
+        "stamp_duty": {
+          "bsonType": "double",
+          "description": "stamp duty paid"
+        },
+        "registration_fee": {
+          "bsonType": "double",
+          "description": "registration fee paid"
+        }
+      },
+      "additionalProperties": false
+    },
+    "value": {
+      "bsonType": "object",
+      "properties": {
+        "consideration": {
+          "bsonType": "double",
+          "description": "consideration value"
+        },
+        "market": {
+          "bsonType": "double",
+          "description": "market value"
+        }
+      },
+      "additionalProperties": false
+    },
+    "area": {
+      "bsonType": [
+        "array"
+      ],
+      "items": {
+        "bsonType": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "bsonType": "double",
+            "description": "area"
+          },
+          "unit": {
+            "bsonType": "string",
+            "description": "area unit"
+          },
+          "type": {
+            "bsonType": "string",
+            "description": "area type i.e BA, SBA, CA etc"
+          }
+        }
+      }
+    },
+    "address": {
+      "bsonType": "object",
+      "required": [
+        "locality"
+      ],
+      "properties": {
+        "unit": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "object",
+            "additionalProperties": false,
+            "properties": {
+              "number": {
+                "bsonType": [
+                  "array"
+                ],
+                "items": {
+                  "bsonType": "string"
+                },
+                "description": "various unit numbers of addresss"
+              },
+              "type": {
+                "bsonType": "string",
+                "description": "type of unit i.e flat, plot, shop, survey no etc"
+              }
+            },
+            "description": "numerical commponents in an address"
+          }
+        },
+        "type": {
+          "enum": [
+            "Residential",
+            "Commercial",
+            "Industrial",
+            null
+          ],
+          "description": "property use"
+        },
+        "locality": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "bsonType": "string",
+                "description": "various unit numbers of addresss"
+              },
+              "name": {
+                "bsonType": "string",
+                "description": "type of unit i.e flat, plot, shop, survey no etc"
+              },
+              "type": {
+                "bsonType": "string",
+                "description": "village, locality, revenue village etc"
+              },
+              "geom_point": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "Point"
+                    ]
+                  },
+                  "coordinates": {
+                    "bsonType": [
+                      "array"
+                    ],
+                    "items": {
+                      "bsonType": "double"
+                    },
+                    "description": "long lat value of the entity"
+                  }
+                }
+              }
+            }
+          },
+          "description": "tagged localities"
+        },
+        "project": {
+          "bsonType": [
+            "array"
+          ],
+          "items": {
+            "bsonType": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "bsonType": "string",
+                "description": "id of the project"
+              },
+              "name": {
+                "bsonType": "string",
+                "description": "name of the project"
+              },
+              "type": {
+                "bsonType": "string",
+                "description": "type of project i.e rera non-rera etc"
+              },
+              "geom_point": {
+                "bsonType": "string",
+                "description": "long lat value of the project"
+              }
+            },
+            "description": "tagged projects"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "aws_pointer": {
+      "bsonType": [
+        "array"
+      ],
+      "items": {
+        "bsonType": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "bsonType": "string",
+            "description": "name of document contained in the file"
+          },
+          "type": {
+            "enum": [
+              "pdf",
+              "html"
+            ],
+            "description": "file type"
+          },
+          "path": {
+            "bsonType": "string",
+            "description": "s3 bucket & object id combination"
+          }
+        }
+      }
+    },
+    "endpoint": {
+      "bsonType": "string",
+      "description": "full table name in postgreSQL"
+    },
+    "primary_sale": {
+      "bsonType": "boolean",
+      "description": "primary or secondary sale"
+    },
+    "version": {
+      "bsonType": "int32",
+      "description": "version control"
+    }
+  

@@ -1,0 +1,5 @@
+recursive-include new_transformer/knowledge_base/english *.csv
+recursive-include new_transformer/knowledge_base/hindi *.csv
+recursive-include new_transformer/knowledge_base/marathi *.csv
+recursive-include new_transformer local.env
+include check

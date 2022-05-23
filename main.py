@@ -2,7 +2,7 @@ import os
 import importlib
 import argparse
 
-import check
+# import check
 
 
 def get_args():

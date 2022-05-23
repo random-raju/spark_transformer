@@ -5,12 +5,12 @@ from pyspark.sql.types import StructType, StructField, StringType
 from new_transformer.urlc.mh_gom_rd_deeds_pune import raw_to_clean_pipeline_definitions
 from time import perf_counter
 from new_transformer.utils.pg_updater import update_batch
-from new_transformer.utils.mongo_writer import write_batch
+# from new_transformer.utils.mongo_writer import write_batch
 from pyspark.sql.functions import lit
 from new_transformer.tagger.tagger import Tagger
 
 SOURCE_TABLE = 'mh_gom_rd_deeds_pune.reg_test'
-BATCH_SIZE = 100
+BATCH_SIZE = 5000
 SOURCE_DB_TYPE = 'RAW'
 
 COLUMNS_TO_FOR_RAW_UPDATE = ['raw_hash', 'reclean_status', 'source_table', 'clean_hash']
@@ -66,7 +66,8 @@ def main():
     df = fetch_raw_rows_in_batch(spark_context, SOURCE_DB_TYPE, SOURCE_TABLE, BATCH_SIZE)
 
     clean_df_for_write = execute_pipeline_definitions(df, pipeline_definitions)
-    clean_df_for_write.show()
+    clean_df_for_write.show(5000)
+    clean_df_for_write.printSchema()
     # df.show()
     # clean_df_for_write.show()
     # print(2)

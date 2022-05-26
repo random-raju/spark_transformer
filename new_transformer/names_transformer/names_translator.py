@@ -1,11 +1,11 @@
+import os
 import re
 import sys
 
 import pandas as pd
 
-from new_transformer.utils import transliterator
 from new_transformer.utils import convert
-import os
+from new_transformer.utils import transliterator
 
 class NamesTranslator:
     """
@@ -14,6 +14,7 @@ class NamesTranslator:
     """
 
     KNOWLEDGE_BASE_DIR = os.getcwd() + "/new_transformer/knowledge_base/"
+
     LANG_MAPPER = {
         "marathi": "mar",
         "hindi": "hin",
@@ -70,6 +71,7 @@ class NamesTranslator:
 
         name = self.transliterator.transform(name)
         name = name.replace("\x00", " ")
+        name = name.replace("\xa0", " ")
 
         return name
 
@@ -198,14 +200,22 @@ class NamesTranslator:
         name = re.sub(r"\.{2,}", " ", name)
         name = re.sub(r"\s{2,}", " ", name).strip()
         name = re.sub(r"^\W+", " ", name).strip()
+        name = re.sub(r"address(.*)", " ", name).strip()
         name = re.sub(r"\W+$", " ", name).strip()
         name = re.sub(r"-", " ", name).strip()
         name = re.sub(r"\s{2,}", " ", name).strip()
         name = re.sub(r"^\W+", " ", name).strip()
         name = re.sub(r"\W+$", " ", name).strip()
-        name = re.sub(r"\s{2,}", " ", name).strip()
+        name = name.replace("\u00a0", " ")
+        name = re.sub(r"\s{2,}", " ", name).strip().title()
+        name = name.split(",")
+        name = [i.strip() for i in name if i.strip()]
+        name = [re.sub(r"^\W+", " ", i).strip() for i in name if i.strip()]
+        name = [re.sub(r"\W+$", " ", i).strip() for i in name if i.strip()]
 
-        return name.title().strip()
+        name = list(set(name))
+
+        return name
 
     def remove_noise(name: str, phrases: list = [], **kwargs):
         """
@@ -299,13 +309,19 @@ class NamesTranslator:
         self.raw_name = name
 
         if NamesTranslator.calculate_no_of_indian_language_tokens(name) == 0:
+            if not self.raw_name:
+                return None
+
             output = {
                 "raw_name": self.raw_name,
                 "name_mapped": self.raw_name,
                 "name_translit": self.raw_name,
                 "clean_name": self.raw_name,
             }
-            raw_name = NamesTranslator.normalize_name(self.raw_name)
+
+            # raw_name = self.raw_name.split(',')
+            raw_name = NamesTranslator.normalize_name(name)
+            raw_name = list(set(raw_name))
 
             return raw_name
 
@@ -335,7 +351,9 @@ class NamesTranslator:
             "clean_name": self.name_translit,
         }
 
-        names = self.name_translit.split(',')
+        # print(self.name_translit)
+        # names = self.name_translit.split(",")
+        names = self.name_translit
         names = [name.strip() for name in names if name.strip()]
         names = list(set(names))
 
@@ -343,6 +361,6 @@ class NamesTranslator:
 
 
 if __name__ == "__main__":
-    a = '-कर्ज घेणार - श्रीमती. भारती रामचंद्र पवार,-कर्ज घेणार - श्री. सोमनाथ रामचंद्र पवार,-कर्ज घेणार - सौ. कल्याणी सोमनाथ पवार,-कर्ज घेणार - श्रीमती. भारती रामचंद्र पवार,-कर्ज घेणार - श्री. सोमनाथ रामचंद्र पवार,-कर्ज घेणार - सौ. कल्याणी सोमनाथ पवार'
+    a = "icici bank ltd.,icici bank ltd."
 
     print(NamesTranslator(languages=["marathi"]).translate_name(a))

@@ -1,9 +1,9 @@
 import re
-import os
+
 import pandas as pd
 
 from new_transformer.address_transformer import address_translator
-
+import os
 
 class AreaConverter:
     """
@@ -24,6 +24,14 @@ class AreaConverter:
         "hectare": 107639,
         "gunta": 101.1714,
         "acre": 43560,
+    }
+
+    STD_AREA = {
+        "sq(.)?( )?meter": "sq meter",
+        "sq(.)?( )?feet": "sq feet",
+        "hectare": "hectare",
+        "gunta": "gunta",
+        "acre": "acre",
     }
 
     def __init__(self, languages: list = ["english"]) -> None:
@@ -58,7 +66,7 @@ class AreaConverter:
         text = re.sub(r"carpet", "|carpet", text)
         text = re.sub(r"(sqaure|square)\.?", " sq ", text)
         text = re.sub(r"( ft |feet|foot)\.?", "feet ", text)
-        text = re.sub(r"(mter|feet|foot|meter|metre)\.?", " meter ", text)
+        text = re.sub(r"(mter|meter|metre)\.?", " meter ", text)
         text = re.sub(r"(guntha|gunthe)\.?", " gunta ", text)
         text = re.sub(r"\s{2,}", " ", text)
 
@@ -82,19 +90,74 @@ class AreaConverter:
 
     def get_area_unit(text):
 
-        for type in AreaConverter.AREA_UNITS:
-            if type in text:
-                return type
+        for type in AreaConverter.STD_AREA:
+            if re.search(rf"{type}", text):
+                return AreaConverter.STD_AREA[type]
 
         return None
 
-    def convert_to_square_feet(self, text):
+    def get_open_area_sqft(dict):
+
+        final_op = []
+
+        for _ in dict:
+            if dict["open_area_sqft"]:
+                for value in dict["open_area_sqft"]:
+                    output = {}
+                    output["value"] = value
+                    output["unit"] = "SQFT"
+                    output["type"] = "Open Area"
+                    if not output["value"] or output["value"] == [0]:
+                        continue
+                    final_op.append(output)
+
+        return final_op
+
+    def restructure_for_mongo(dict):
+
+        final_op = []
+
+        for _ in dict:
+            if dict["open_area_sqft"]:
+                for value in dict["open_area_sqft"]:
+                    output = {}
+                    output["value"] = value
+                    output["unit"] = "SQFT"
+                    output["type"] = "Open Area"
+                    if not output["value"] or output["value"] == [0]:
+                        continue
+                    final_op.append(output)
+
+            if dict["build_area_sqft"]:
+                for value in dict["build_area_sqft"]:
+                    output = {}
+                    output["value"] = value
+                    output["unit"] = "SQFT"
+                    output["type"] = "Built-up Area"
+                    if not output["value"] or output["value"] == [0]:
+                        continue
+                    final_op.append(output)
+
+            if dict["carpet_area"]:
+                for value in dict["carpet_area"]:
+                    output = {}
+                    output["value"] = value
+                    output["unit"] = "SQFT"
+                    output["type"] = "Carpet Area"
+                    if not output["value"] or output["value"] == [0]:
+                        continue
+                    final_op.append(output)
+            break
+
+        return dict
+
+    def convert_to_square_feet(self, text , type = None):
 
         area_dict = {"open_area_sqft": [], "build_area_sqft": [], "carpet_area": []}
 
         translations = self.translator.translate_address(text)
-        clean_text = translations["clean_address"]
-        clean_text = AreaConverter.replace_variations_by_constants(text)
+        clean_text = translations
+        clean_text = AreaConverter.replace_variations_by_constants(clean_text)
 
         clean_text = clean_text.split("|")
         clean_text = [i.strip() for i in clean_text if i.strip()]
@@ -103,7 +166,7 @@ class AreaConverter:
             area_type = AreaConverter.get_area_type(area)
             area_unit = AreaConverter.get_area_unit(area)
             if not area_unit:
-                continue
+                area_unit = "sq meter"
             if area_unit and not area_type:
                 std_area_type = "open_area_sqft"
             else:
@@ -111,10 +174,22 @@ class AreaConverter:
 
             conversion_factory = AreaConverter.AREA_UNITS[area_unit]
             area = AreaConverter.clean_area(area)
+            if area == "":
+                area = 0
+            if ":" in area:
+                area = 0
             area = round(float(area), 2)
             area_sqft = area * conversion_factory
             area_dict[std_area_type].append(area_sqft)
             area_dict[std_area_type] = list(set(area_dict[std_area_type]))
+
+        for key in area_dict:
+            if not area_dict[key] or area_dict[key] == [0]:
+                area_dict[key] = None
+
+        # output = AreaConverter.restructure_for_mongo(area_dict)
+        if type:
+            return area_dict[type]
 
         return area_dict
 
@@ -122,10 +197,10 @@ class AreaConverter:
 if __name__ == "__main__":
 
     area = """
-    1) Build Area :0.00 / Open Area :11000 Square Meter 2) Build Area :0.00 / Open Area :12000 Square Meter 3) Build Area :0.00 / Open Area :2300 Square Meter 4) Build Area :0.00 / Open Area :5700 Square Meter 5) Build Area :0.00 / Open Area :6600 Square Meter
+    1) Build Area :153.00 / Open Area :0 Square Meter 2) Build Area :153.00 / Open Area :0 Square Meter
     """
     convertor = AreaConverter(languages=["marathi", "english"])
-    area = convertor.convert_to_square_feet(area)
+    area = convertor.convert_to_square_feet(area,type='build_area_sqft')
     print(area)
 # import pandas as pd
 # df = pd.read_csv('./pune_area_1.csv')

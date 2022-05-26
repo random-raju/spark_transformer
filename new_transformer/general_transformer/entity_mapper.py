@@ -1,4 +1,5 @@
 import pandas as pd
+
 import os
 
 class EntityMapper:
@@ -13,10 +14,11 @@ class EntityMapper:
         "district": "district_mappings.csv",
         "sro": "sro_mappings.csv",
         "village": "villages.csv",
+        "raw_deed": "deed_type_mappings.csv",
     }
 
     def _load_mapping_file(
-        languages: list, file_directory: str, file_name: str,
+        languages: list, file_directory: str, file_name: str, mapper_type=None
     ):
 
         mapper = {}
@@ -24,7 +26,10 @@ class EntityMapper:
             file_location = file_directory + lang + "/" + file_name
             try:
                 df = pd.read_csv(file_location)
-                variations_mapper = dict(zip(df.og_representation, df.mapping))
+                if mapper_type != "raw_deed":
+                    variations_mapper = dict(zip(df.og_representation, df.mapping))
+                else:
+                    variations_mapper = dict(zip(df.og_representation, df.doc_name_eng))
                 mapper = {
                     **mapper,
                     **variations_mapper,
@@ -38,7 +43,6 @@ class EntityMapper:
         """
             Load mapper
         """
-        print(EntityMapper.KNOWLEDGE_BASE_DIR)
         if not mapper_type or not EntityMapper.MAPPER_TYPE_TO_FILE.get(
             mapper_type, None
         ):
@@ -52,17 +56,17 @@ class EntityMapper:
             languages,
             file_directory=EntityMapper.KNOWLEDGE_BASE_DIR,
             file_name=file_name,
+            mapper_type=mapper_type,
         )
-        print(self.mapper)
 
-    def map_entity(self, raw_value):
+    def map_entity(self, raw_deed_type):
 
-        if not raw_value or not raw_value.strip():
+        if not raw_deed_type or not raw_deed_type.strip():
             return None
-        if raw_value.strip() not in self.mapper:
+        if raw_deed_type.strip() not in self.mapper:
             return None
         else:
-            return self.mapper[raw_value.strip()].strip()
+            return self.mapper[raw_deed_type.strip()].strip()
 
 
 if __name__ == "__main__":
@@ -73,8 +77,8 @@ if __name__ == "__main__":
     district_mapper = EntityMapper(mapper_type="district", languages=["marathi"])
     print(district_mapper.map_entity("पुणे"))
 
-    village_mapper = EntityMapper(mapper_type="village", languages=["marathi"])
-    print(village_mapper.map_entity("&nbsp &nbsp लोणीकंद"))
+    raw_deed_mapper = EntityMapper(mapper_type="village", languages=["marathi"])
+    print(raw_deed_mapper.map_entity("&nbsp &nbsp लोणीकंद"))
 
-    sro_mapping = EntityMapper(mapper_type="sro", languages=["english"])
-    print(sro_mapping.map_entity("Joint S.R. Baramati2"))
+    raw_deed_mapper = EntityMapper(mapper_type="raw_deed", languages=["english"])
+    print(raw_deed_mapper.map_entity("36-अ-लिव्ह अॅड लायसन्सेस"))

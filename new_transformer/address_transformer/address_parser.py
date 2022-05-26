@@ -1,8 +1,11 @@
+import json
 import re
 
 import pandas as pd
+
+from new_transformer.utils import convert
+# from tagger.tagger import Tagger
 import os
-import json
 
 class AddressParser:
     """
@@ -157,6 +160,7 @@ class AddressParser:
         address = re.sub(r"\n", " ", address)
         address = re.sub(r"\r", " ", address)
         address = re.sub(r" to ", ",", address)
+        address = re.sub(r"unit", "flat no ", address)
         address = re.sub(r" (th)(\W| )?", "th ", address)
         address = re.sub(r" (st)(\W| )?", "st ", address)
         address = re.sub(r" (nd)(\W| )?", "nd ", address)
@@ -245,6 +249,8 @@ class AddressParser:
             prop_identifier = re.sub(r"\s{2,}", " ", prop_identifier)
             prop_identifier = re.sub(r"^\W+", " ", prop_identifier).strip()
             prop_identifier = re.sub(r"\W+$", " ", prop_identifier).strip()
+            prop_identifier = re.sub(r"^\W+", " ", prop_identifier).strip()
+            prop_identifier = re.sub(r"\W+$", " ", prop_identifier).strip()
             prop_identifier = AddressParser.remove_leading_zeroes(prop_identifier)
         else:
             prop_identifier = ""
@@ -268,7 +274,13 @@ class AddressParser:
         # if len(prop_identifiers) == 1:
         #     address_component = {label: prop_identifiers}
         # else:
-        address_component = {label: prop_identifiers}
+        prop_identifiers = list(set(prop_identifiers))
+        new_prop_identifiers = []
+        for identifier in prop_identifiers:
+            if not re.search(r"^\)( )?\d", identifier):
+                new_prop_identifiers.append(identifier)
+
+        address_component = {label: new_prop_identifiers}
 
         return address_component
 
@@ -303,10 +315,10 @@ class AddressParser:
             restructured_compoents = {"unit": []}
             for key, value in address_components.items():
                 if isinstance(value, list) and value:
-                    component = {"numbers": value, "type": key}
+                    component = {"number": value, "type": key}
                     restructured_compoents["unit"].append(component)
                 elif isinstance(value, str) and value:
-                    component = {"number": value, "type": key}
+                    component = {"number": [value], "type": key}
                     restructured_compoents["unit"].append(component)
         else:
             restructured_compoents = {"unit": None}
@@ -315,6 +327,68 @@ class AddressParser:
             restructured_compoents = {"unit": None}
 
         return restructured_compoents
+
+    def get_property_type(address):
+
+        address = AddressParser.preprocess_address(
+            address
+        )
+
+        if "office" in address:
+            return "Commercial"
+        elif "flat" in address or "apartment" in address:
+            return "Residential"
+        elif "industrial" in address:
+            return "Industrial"
+
+        return None
+
+    def reformat_address_components(address_components):
+
+        output = {}
+
+        if address_components.get("unit", None):
+            for item in address_components["unit"]:
+                output[item["type"]] = ",".join(item["number"])
+
+        if address_components.get("type", None):
+            output["property_type"] = address_components.get("type", None)
+
+        if address_components.get("locality", None):
+            locality_names = []
+            locality_ids = []
+
+            for locality in address_components.get("locality"):
+                if locality["name"] not in locality_names:
+                    locality_names.append(locality["name"])
+                if locality["id"] not in locality_names:
+                    locality_ids.append(locality["id"])
+
+            if locality_names:
+                output["locality"] = ",".join(locality_names).title()
+            if locality_ids:
+                output["locality_tag_id"] = convert.to_jsonb(locality_ids)
+            output["locality_details"] = convert.to_jsonb(
+                address_components.get("locality")
+            )
+
+        if address_components.get("project", None):
+            project_ids = []
+            project_name = []
+            for project in address_components.get("project"):
+                project_ids.append(project["id"])
+                project_name.append(project["name"])
+                break
+            if project_ids:
+                output["project_tag_id"] = project_ids[0]
+            if project_name:
+                output["project"] = project_name[0]
+
+            output["project_details"] = convert.to_jsonb(
+                address_components.get("project")[0]
+            )
+
+        return output
 
     def parse_address_to_components(self, address: str, **kwargs):
 
@@ -326,6 +400,8 @@ class AddressParser:
         address_components = {}
 
         for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != kwargs['component']:
+                continue
             label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
             parsed_address_component = AddressParser.parse_property_identifier(
                 self.preproc_address, keyphrase, label
@@ -335,59 +411,359 @@ class AddressParser:
         address_components = AddressParser.restructure_address_components(
             address_components
         )
-        if not address_components:
-            return None
+        # address_components["type"] = AddressParser.get_property_type(
+        #     self.preproc_address
+        # )
 
-        return json.dumps(address_components)
+        # data_dict = {
+        #     "address": self.preproc_address,
+        #     "district": kwargs["district"],
+        #     "clean_hash": kwargs["clean_hash"],
+        # }
+        # tagger_fp_name = Tagger(
+        #     data_dict, "address", district="district", to_tag_column="address"
+        # )
+        # tagger_fp_name_df = tagger_fp_name.main()
 
-    def parse_flat_no(
-        self, address: str, key_phrase="flat no", label="flat_no", **kwargs
-    ):
+        # locality = tagger_fp_name_df.tagged_locality_data.tolist()[0]
+        # project = tagger_fp_name_df.tagged_project_data.tolist()[0]
+        locality = []
+        project = []
 
+        if locality:
+            localities = []
+            locality_ids = []
+            for item in locality:
+                if item["id"] in locality_ids:
+                    continue
+                new_locality = {
+                    "id": item["id"],
+                    "name": item["name"],
+                    "type": item["type"],
+                }
+                geom_point = item["geom_point"]
+                geom_point = geom_point.split(",")
+                geom_point = [float(i) for i in geom_point]
+                new_locality["geom_point"] = {
+                    "type": "Point",
+                    "coordinates": geom_point,
+                }
+                locality_ids.append(item["id"])
+                localities.append(new_locality)
+            address_components["locality"] = localities
+
+        if project:
+            projects = []
+            project_ids = []
+            for item in project:
+                if item["id"] in project_ids:
+                    continue
+                new_project = {
+                    "id": item["id"],
+                    "name": item["name"],
+                    "type": item["type"],
+                }
+                geom_point = item["geom_point"]
+                geom_point = geom_point.split(",")
+                geom_point = [float(i) for i in geom_point]
+                new_project["geom_point"] = {"type": "Point", "coordinates": geom_point}
+                project_ids.append(item["id"])
+                projects.append(new_project)
+
+            address_components["project"] = projects
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components
+
+    def parse_flat_no(self, address: str, **kwargs):
+
+        if not address:
+            return ''
+
+        self.raw_address = address
         self.preproc_address = AddressParser.preprocess_address(
             address, variations_mapper=self.property_variations_mapper
         )
 
-        address = self.preproc_address
+        address_components = {}
 
-        if re.search(rf"{key_phrase}", address):
-            prop_identifiers = []
-            for match in re.finditer(rf"{key_phrase}", address):
-                parsed_address = address[match.start() :]
-                prop_identifier = re.search(
-                    rf"{key_phrase}(.*)", parsed_address
-                ).group()
-                prop_identifiers.append(prop_identifier)
-
-            address_component = AddressParser._handle_multiple_identifiers(
-                prop_identifiers, key_phrase, label
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'flat no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
             )
-            value = address_component.get(label, "")
-            value = ", ".join(value)
+            address_components = {**address_components, **parsed_address_component}
 
-            if value.strip() == ",":
-                return None
-            else:
-                return value
-        else:
-            return None
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
 
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('flat_no')
+
+    def parse_house_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'house no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('house_no')
+
+    def parse_plot_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'plot no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('plot_no')
+
+    def parse_survey_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'survey no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('survey_no')
+
+    def parse_office_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'office no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('office_no')
+
+
+    def parse_shop_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'shop no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('shop_no')
+
+
+    def parse_tower_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'tower no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('tower_no')
+
+    def parse_wing_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'wing no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('wing_no')
+
+    def parse_floor_no(self, address: str, **kwargs):
+
+        self.raw_address = address
+        self.preproc_address = AddressParser.preprocess_address(
+            address, variations_mapper=self.property_variations_mapper
+        )
+
+        address_components = {}
+
+        for keyphrase in AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL:
+            if keyphrase != 'floor no':
+                continue
+            label = AddressParser.KEY_PHRASES_TO_ADDRESS_COMPONENT_LABEL[keyphrase]
+            parsed_address_component = AddressParser.parse_property_identifier(
+                self.preproc_address, keyphrase, label
+            )
+            address_components = {**address_components, **parsed_address_component}
+
+        address_components = AddressParser.restructure_address_components(
+            address_components
+        )
+
+        address_components = AddressParser.reformat_address_components(
+            address_components
+        )
+
+        return address_components.get('floor_no')
 
 if __name__ == "__main__":
-
-    # 255719 address = "(Property Description) 1) Corporation: पिंपरी-चिंचवड म.न.पा. Other details: Building Name:GANESH JOYNEST,WING B, Flat No:910, Road:, Block Sector:, Landmark: ( GAT NUMBER: 1193/1,1193/8,1194 "
-    address = "Flat No:16, Floor No:GROUND, Building Name:ATUL PLAZA BUILDING, Block Sector:NEAR ALLHABAD BANK MAHADEVNAGAR , Road:MANJARI BUDRUK, City:Manjari Budruk , District:Pune"
+    address = "Building Name: Rohin Tower 2, Piramal Revanta Tower 2, Flat No: 805, Road: Goregaon Mulund Link Road, Block Sector: Mulund West, Mumbai, 400080, Landmark: Village: Nahur, Behind Nirmal Lifestyle Mall ( C.T.S. Number: 491 A/5 And 491 A/6"
+    # address = "gandharva excellencee phase 1 SHREE RADHE KRISHNA (Property Description) 1) Corporation: पिंपरी-चिंचवड म.न.पा. Other details: Building Name:GANESH JOYNEST,WING B, Flat No:910, Road:, Block Sector:, Landmark: ( GAT NUMBER: 1193/1,1193/8,1194 "
+    # address = "gandharva excellencee phase 1 SHREE RADHE KRISHNA"
     # count = 0
     # FINAL = []
 
     # address = """
     #     सदनिका नं: बी-5, माळा नं: तळ, इमारतीचे नाव: गोराई 1 जलधारा को ओप हो सौ ली, ब्लॉक नं: बोरीवली पश्चिम मुंबई, रोड : प्लाट नं 94 आर एस सी 5 गोराई 1, इतर माहिती: 30% घसारा बांधकाम वर्ष-1990 बी.एस.सी. असेसमॅंट टेक्स बिल
     #     """
-    print("------------------")
-    print(address)
+
+    # clean_df_for_write = {"district" : "Pune" ,"address":'BALEWADI YOGESH GANDHARV EXCELLENCEE ADITYAS A GARDEN CITY','clean_hash' : 'asd'}
+
+    # print("------------------")
+    # print(address)
     parser = AddressParser(languages=["english"])
-    unit = parser.parse_address_to_components(address)
-    print(parser.parse_flat_no(address))
+    unit = parser.parse_flat_no(
+        address
+    )
+    print(json.dumps(unit, indent=4))
+    unit = parser.parse_house_no(
+        address
+    )
+    print(json.dumps(unit, indent=4))
+    unit = parser.parse_house_no(
+        address
+    )
+    print(json.dumps(unit, indent=4))
+    # print(parser.parse_flat_no(address))
 
     # unit = unit['unit'][0]
     # nos = unit.get('number','')

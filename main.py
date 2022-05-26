@@ -37,10 +37,7 @@ def main():
     # args = get_args()
     # urlc  = args.urlc
     # module_path = 'new_transformer.urlc.mh_gom_rd_deeds_pune.pune_deeds_regular' + urlc
-    print(os.getcwd())
-    print(os.listdir())
 
-    print('--------------------------')
     # module_path = 'new_transformer.urlc.test.check'
     module_path = 'new_transformer.urlc.mh_gom_rd_deeds_pune.pune_deeds_regular'
     module = module_loader(module_path)

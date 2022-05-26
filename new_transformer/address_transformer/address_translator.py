@@ -1,8 +1,11 @@
 import re
 import sys
-import pandas as pd
-from new_transformer.utils import transliterator
 import os
+import pandas as pd
+
+from new_transformer.address_transformer.address_cleaner import AddressCleaner
+from new_transformer.utils import transliterator
+
 
 class AddressTranslator:
     """
@@ -11,6 +14,7 @@ class AddressTranslator:
     """
 
     KNOWLEDGE_BASE_DIR = os.getcwd() + "/new_transformer/knowledge_base/"
+
     LANG_MAPPER = {
         "marathi": "mar",
         "hindi": "hin",
@@ -76,14 +80,19 @@ class AddressTranslator:
         language = [i for i in languages if i != "english"][0]
         language_code = AddressTranslator.LANG_MAPPER[language]
         self.transliterator = transliterator.get_transliterate_object(src=language_code)
+        self.address_cleaner = AddressCleaner(["english"])
 
     def transliterate_address(self, address: str):
 
         if not address:
             return None
 
+        if AddressTranslator.calculate_no_of_indian_language_tokens(address) == 0:
+            return address
+
         address = self.transliterator.transform(address)
         address = address.replace("\x00", " ")
+        address = address.replace("\xa0", " ")
 
         return address
 
@@ -275,14 +284,11 @@ class AddressTranslator:
 
     def normalize_address(address: str):
 
-        if not address:
-            return None
-
         address = AddressTranslator.remove_space_before_and_after_special_chars(address)
         address = re.sub(r"\W{4,}", ",", address)
         address = re.sub(r"( )?,( )?", ", ", address)
         address = re.sub(r":", ": ", address)
-        address = re.sub(r"&nbsp", " ", address)
+        address = re.sub(r", ,", " ", address)
         address = re.sub(r"\s{2,}", " ", address)
 
         return address.title().strip()
@@ -291,8 +297,10 @@ class AddressTranslator:
 
         self.raw_address = address
 
+        address = self.address_cleaner.clean_address(address)
+
         if AddressTranslator.calculate_no_of_indian_language_tokens(address) == 0:
-            return None
+            return address
 
         address = AddressTranslator.preprocess_address(address)
 
@@ -315,19 +323,24 @@ class AddressTranslator:
 
         return address_mapped
 
-    def translate_address(self, address: str):
+    def translate_address(self, address: str, type = 'clean_address'):
 
         self.raw_address = address
 
+        address = self.address_cleaner.clean_address(address)
+
         if AddressTranslator.calculate_no_of_indian_language_tokens(address) == 0:
+
+            self.raw_address = self.address_cleaner.clean_address(self.raw_address)
+
             output = {
                 "raw_address": self.raw_address,
-                "address_mapped": self.raw_address,
-                "address_translit": self.raw_address,
-                "clean_address": self.raw_address,
+                "address_mapped": address,
+                "address_translit": address,
+                "clean_address": address,
             }
 
-            return output
+            return output[type]
 
         address = AddressTranslator.preprocess_address(address)
 
@@ -361,13 +374,24 @@ class AddressTranslator:
             "clean_address": self.address_translit,
         }
 
-        return output
+        return output[type]
 
 
 if __name__ == "__main__":
 
-    address = "बांधीव मिळकतीचे क्षेत्रफळ 139.4 चेो.मी. आहे."
+    # from pg.teal_data_scraped_clean.mh_gom_rd_deeds_mum import address_cleaner
+
+    # from pg.utils import transformer
+
+    # translit_obj = transformer.get_transliterate_object(src="mar")
+
+    address = ", इतर माहिती: गांव व ग्रामपंचायत मौजे शिक्रापूर,येथील आमचे स्वतंत्र खरेदी मालकीहक्काची व ताबेवहिवाटीची बागायत शेतजमीन मिळकत. गट नं 478 क्षेत्र 01 हे 39 आर अधिक पो ख 0 हे 02 आर आकार 4 रु 84 पैसे यापैकी लिहून देतो ती आमचे मालकीहिष्ष्याची व ताबेवहिवाटीची मिळकत खालील प्रमाणे,गट नं 478 पैकी क्षेत्र 00 हे 01 आर आकार 00रु 03 पैसे वरील प्रमाणे लिहून देणार यांचे हिष्ष्याची बागायत मिळकत क्षेत्र 00 हेक्टर 01 आर मिळकत एक हजार चौ फुट मिळकत सदरची मिळकत जाणे येणेचे वहिवाटीचे मालकीहक्कासह व सुखाधिकारासह"
 
     translator = AddressTranslator(["marathi"])
     address = translator.translate_address(address)
+    # clean_address = address_cleaner.clean_address(
+    #     address["address_mapped"], translit_obj, 2
+    # )
+
+    # print(clean_address)
     print(address)

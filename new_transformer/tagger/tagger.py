@@ -25,7 +25,7 @@ class Tagger:
         self.district = district
         self.to_tag_column = to_tag_column
         self.data_to_tag = ''
-        self.solr_url = "http://172.31.22.174:2517/solr/"
+        self.solr_url = "your_url"
 
     def process_row(self, response):
         df = pd.DataFrame.from_dict([x for x in json.loads(response.text)['response']['docs']])
@@ -110,7 +110,7 @@ class Tagger:
             params=params,
             headers={"Content-Type": "text/plain"},
             data=self.data_to_tag.encode("utf-8"),
-            auth=("tealindia_solr_reader", "MSQj55%cRbU5kSq")
+            auth=(None, None )
         )
 
         if response.status_code == 200:# and json.loads(response.text)['response']['docs']:
@@ -144,7 +144,7 @@ class Tagger:
             params=params,
             headers={"Content-Type": "text/plain"},
             data=self.data_to_tag.encode("utf-8"),
-            auth=("tealindia_solr_reader", "MSQj55%cRbU5kSq")
+            auth=(None, None)
         )
 
         if response.status_code == 200 and json.loads(response.text)['response']['docs']:
@@ -180,7 +180,7 @@ class Tagger:
             params=params,
             headers={"Content-Type": "text/plain"},
             data=self.data_to_tag.encode("utf-8"),
-            auth=("tealindia_solr_reader", "MSQj55%cRbU5kSq")
+            auth=(None,None)
         )
 
         if response.status_code == 200: #and json.loads(response.text)['response']['docs']:

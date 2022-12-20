@@ -83,20 +83,6 @@ def update_batch(batch):
         host = os.environ.get(f"PG_HOST_RAW"),
         port = os.environ.get("PG_PORT"),
     )
-    # raw_db_connection = psycopg2.connect(
-    #     database = 'teal_data_scraped_raw',
-    #     user = 'tealindia_data_pipeline',
-    #     password = 'Hb3bnnjQTSVVvyKL5KB6sNEPWRkpZW7s',
-    #     host = 'teal-data-scraped-raw.cv1c0yuqvqlw.ap-south-1.rds.amazonaws.com',
-    #     port = os.environ.get("PG_PORT"),
-    # )
-    # raw_db_connection = psycopg2.connect(
-    #     database='teal_data_scraped_raw',
-    #     user='postgres',
-    #     password='postgres',
-    #     host='localhost',
-    #     port='2517',
-    # )
 
     raw_db_cursor = raw_db_connection.cursor()
 

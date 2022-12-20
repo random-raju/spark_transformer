@@ -13,7 +13,7 @@ import json
 
 def get_local_mongo_db_connection():
 
-    mongo_client = pymongo.MongoClient("mongodb+srv://teal_data_intern:OLEftqhheufQB7FS@cluster0.t7lcr.mongodb.net/ownership")
+    mongo_client = pymongo.MongoClient("cred")
     mongo_db_conn = mongo_client["ownership"]
     mongo_collection = mongo_db_conn["pune-temp"]
 
